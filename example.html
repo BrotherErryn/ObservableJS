@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="ut-8" />
+	</head>
+	<body>
+		<div data-bind="model:myViewModel">
+			<input type="text" data-bind="value:name" /> <input type="checkbox" id="awesome" data-bind="value:nameIsAwesome" /><label for="awesome">is awesome</label>
+
+			<br />
+			<div data-bind="visible:nameIsAwesome">
+				<span data-bind="text:name"></span>
+				<span data-bind="text:nameIsAwesome"></span>
+			</div>
+
+			<!--<div data-bind="foreach:items">
+				<p><span>Item</span> <span data-bind="text:name"></span></p>
+			</div>-->
+
+			<div>
+				<select data-bind="foreach:items,value:selectedItems" multiple size="5">
+					<option data-bind="text:name"></option>
+				</select>
+			</div>
+			<div data-bind="html:selectionText"></div>
+	    </div>
+		<script src="observable.js"></script>
+		<script src="example.js"></script>
+	</body>
+</html>
