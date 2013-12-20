@@ -1,4 +1,8 @@
-var Observable = (function() {
+/**
+ * @author Erryn Pollock (Brother Erryn) / http://www.atomicmonks.com
+ * A property-based simple binding library
+ */
+var Observable = (function () {
 
 	"use strict";
 
@@ -8,25 +12,25 @@ var Observable = (function() {
 	/* { model: <object>, property: <string>, callback: <function> } */
 	function _watch(options) {
 		var model = options.model,
-			prop = options.property,
-			handler = options.callback;
+			propertyName = options.property,
+			handler = options.callback,
+			property = model[propertyName];
 
 		if(!model._listeners)
 			model._listeners = {};
 
-		if(model._listeners[prop] != null && handler) {
-	    	if(model[prop].__wasExtended) {
-	    		// extended array
-	    		model[prop].__arrayCallbacks.push(handler);
+		if (model._listeners[propertyName] != null && handler) {
+			if (property.__wasArrayExtended) {
+				property.__arrayCallbacks.push(handler);
 	    	} else {
-	    		model._listeners[prop].unshift(handler);
+				model._listeners[propertyName].unshift(handler);
 	    	}
 	        return true;
 	    }
 
-	    var oldval = model[prop],
+		var oldval = model[propertyName],
 	        newval = oldval,
-	        isArray = (Object.prototype.toString.call(model[prop]) === '[object Array]'),
+	        isArray = (Object.prototype.toString.call(property) === '[object Array]'),
 	        getter = function () {
 	            return newval;
 	        },
@@ -38,9 +42,9 @@ var Observable = (function() {
 
 				if(oldval == newval) return;
 
-	            var max = model._listeners[prop].length;
+				var max = model._listeners[propertyName].length;
 	            while(max--) {
-	            	var h = model._listeners[prop][max];
+	            	var h = model._listeners[propertyName][max];
 	            	h.call(model, oldval, val);
 	            }
 
@@ -52,40 +56,32 @@ var Observable = (function() {
 	        };
 	    
 	    if (isArray) {
-            model[prop] = _extendArray(model[prop], handler, model);
+	    	property = _extendArray(property, handler, model);
         }
 
-	    if (delete model[prop]) { // can't watch constants
+	    if (delete model[propertyName]) { // can't watch constants
 	        if (Object.defineProperty) { // ECMAScript 5
-	            Object.defineProperty(model, prop, {
+	        	Object.defineProperty(model, propertyName, {
 	                get: getter,
 	                set: setter,
 	                enumerable: false,
 	                configurable: true
 	            });
 	        } else if (Object.prototype.__defineGetter__ && Object.prototype.__defineSetter__) { // legacy
-	            Object.prototype.__defineGetter__.call(model, prop, getter);
-	            Object.prototype.__defineSetter__.call(model, prop, setter);
+	        	Object.prototype.__defineGetter__.call(model, propertyName, getter);
+	            Object.prototype.__defineSetter__.call(model, propertyName, setter);
 	        }
 	    }
 
-		if(!model._listeners[prop]) model._listeners[prop] = [handler];
+	    if (!model._listeners[propertyName])
+	    	model._listeners[propertyName] = [handler];
 	    
 	    return this;
 	}
 
-	/* remove listener and/or restore getter/setter to simple property */
-	/* { model: <object>, property: <string>, callback: <function> } */
-	/* Is this actually needed? May implement later... */
-	/*
-	function _forget(options) {
-
-	}
-	*/
-
 	// Allows operations performed on an array instance to trigger bindings
 	var _extendArray = function(arr, callback, model) {
-	    if (arr.__wasExtended === true) return;
+	    if (arr.__wasArrayExtended === true) return;
 
 	    function generateOverloadedFunction(target, methodName, self) {
 	        return function () {
@@ -96,20 +92,14 @@ var Observable = (function() {
 	        };
 	    }
 	    arr.updated = function (oldValue, self) {
+	    	//console.log("array handlers: ", arr.__arrayCallbacks.length);
 	    	for (var i=0;i<arr.__arrayCallbacks.length;i++)
-	    		arr.__arrayCallbacks[i].call(this, oldValue);
+	    		arr.__arrayCallbacks[i].call(self, this, oldValue);
 	    };
-	    arr.concat = generateOverloadedFunction(arr, 'concat', model);
-	    arr.join = generateOverloadedFunction(arr, 'join', model);
-	    arr.pop = generateOverloadedFunction(arr, 'pop', model);
-	    arr.push = generateOverloadedFunction(arr, 'push', model);
-	    arr.reverse = generateOverloadedFunction(arr, 'reverse', model);
-	    arr.shift = generateOverloadedFunction(arr, 'shift', model);
-	    arr.slice = generateOverloadedFunction(arr, 'slice', model);
-	    arr.sort = generateOverloadedFunction(arr, 'sort', model);
-	    arr.splice = generateOverloadedFunction(arr, 'splice', model);
-	    arr.unshift = generateOverloadedFunction(arr, 'unshift', model);
-	    arr.__wasExtended = true;
+	    ['concat', 'join', 'pop', 'push', 'reverse', 'shift', 'slice', 'sort', 'splice', 'unshift'].map(function (key) {
+	    	arr[key] = generateOverloadedFunction(arr, key, model);
+	    });
+	    arr.__wasArrayExtended = true;
 	    arr.__arrayCallbacks = [callback];
 
 	    return arr;
@@ -161,100 +151,104 @@ var Observable = (function() {
 
 	function _setInputValue(element, value, parentCollection) {
 		var tn = element.tagName.toLowerCase();
-		if(tn == "input") {
-			var t = element.getAttribute("type");
-			switch(t) {
-				case "checkbox":
-					element.checked = !!value;
-					break;
-				default:
-					element.value = value;
-					break;
-			}
-		} else if (tn == "select") {
-			var items = element._dataContext[parentCollection],
+
+		if (tn == "input")
+			tn = element.getAttribute("type");
+
+		switch(tn) {
+			case "checkbox":
+				element.checked = !!value;
+				break;
+			case "select":
+				var items = element._dataContext[parentCollection],
 				options = element.querySelectorAll('option');
 
-			if(element.multiple) {
-				for(var i=0;i<options.length;i++) {
-					options[i].selected = false;
+				if (element.multiple) {
+					for (var i = 0; i < options.length; i++) {
+						options[i].selected = false;
+					}
+					if (!value) return;
 				}
-				if(!value) return;
-			}
 
-			for(var i=0;i<items.length;i++) {
-				var item = items[i];
-				
-				if(element.multiple) {
-					for(var j=0;j<value.length;j++) {
-						if(value[j] == item)
-							options[i].selected = true;
-					}
-				} else {
-					if(item == value) {
-						element.selectedIndex = i;
+				for (var i = 0; i < items.length; i++) {
+					var item = items[i];
+
+					if (element.multiple) {
+						for (var j = 0; j < value.length; j++) {
+							if (value[j] == item)
+								options[i].selected = true;
+						}
+					} else {
+						if (item == value) {
+							element.selectedIndex = i;
+						}
 					}
 				}
-			}
+
+				break;
+			default:
+				element.value = value;
+				break;
 		}
 	}
 
+	function _clearHandler(element, event, fn) {
+		console.log("Clearing event ", element, event);
+		//setTimeout(function () {
+			element.removeEventListener(event, fn, false);
+		//}, 1);
+	}
 	function _bindInput(element, model, property, parentCollection) {
 		var tn = element.tagName.toLowerCase(),
 			evt = null,
 			fn = null;
 
-		if(tn == "input") {
-			var	t = element.getAttribute("type");
+		if(tn == "input")
+			tn = element.getAttribute("type");
 
-			switch(t) {
-				case "checkbox":
-					evt = "click";
-					fn = function() { 
-						if(!this.element.getAttribute('data-monitor-id')) {
-							// TODO: make this work...
-							var self = this;
-							//this.element.removeEventListener("click", fn, true);
-							//this.element.removeEventListener("click", arguments.callee, false);
-							setTimeout(function() {
-								self.element.removeEventListener("click", fn, false);
-							}, 1);
-							return;
-						}
-						model[property] = element.checked; 
-					};
-					break;
-				default:
-					evt = "keyup";
-					fn = function() { 
+		switch (tn)
+		{
+			case "checkbox":
+				evt = "click";
+				fn = function() { 
+					if(!this.element.getAttribute('data-monitor-id')) {
 						var self = this;
-						if(!this.element.getAttribute('data-monitor-id')) {
-							setTimeout(function() {self.element.removeEventListener("keyup", fn, false);}, 1);
-						}
-						model[property] = element.value; 
-					};
-					break;
-			}
-		} else if (tn == "select") {
-			evt = "change";
-			fn = function() {
-				var self = this;
-				if(!this.element.getAttribute('data-monitor-id')) {
-					setTimeout(function() {self.element.removeEventListener("change", fn, false);}, 1);
-				}
+						_clearHandler(self.element, "click", fn);
+					}
+					model[property] = element.checked; 
+				};
+				break;
+			case "select":
+				evt = "change";
+				fn = function () {
+					var self = this;
+					if (!this.element.getAttribute('data-monitor-id')) {
+						_clearHandler(self.element, "change", fn);
+					}
 
-				var dc = this.element._dataContext,
-					options = this.element.querySelectorAll('option'),
-					selectedOptions = Array.prototype.slice.call(options)
-						.filter(function(ai) { return ai.selected; }),
-					selectedValues = selectedOptions.map(function(item){
+					var dc = this.element._dataContext,
+						options = this.element.querySelectorAll('option'),
+						selectedOptions = Array.prototype.slice.call(options)
+							.filter(function (ai) { return ai.selected; }),
+						selectedValues = selectedOptions.map(function (item) {
 							return item._dataContext;
 						});
 
-				dc[property] = selectedValues;
-			}
+					dc[property] = selectedValues;
+				}
+				break;
+			default:
+				evt = "keyup";
+				fn = function() { 
+					var self = this;
+					if(!this.element.getAttribute('data-monitor-id')) {
+						_clearHandler(self.element, "keyup", fn);
+					}
+					model[property] = element.value; 
+				};
+				break;
 		}
-
+		
 		if(evt && fn) {
 			element.addEventListener(
 				evt, 
@@ -286,11 +280,18 @@ var Observable = (function() {
 				if(!context) continue; // this can happen when trying to process a node that was a foreach child
 
 				var parentCollection = null;
-				if(setting.action == "value") {
-					for(var ii=0;ii<bindSettings.length;ii++) {
-						if(bindSettings[ii].action=="foreach")
-						parentCollection = bindSettings[ii].property;
-					}
+				if (setting.action == "value") {
+					bindSettings.some(function (s) {
+						if (s.action == "foreach") {
+							parentCollection = s.property;
+							return true;
+						}
+					});
+					//for(var ii=0;ii<bindSettings.length;ii++) {
+					//	if (bindSettings[ii].action == "foreach") {
+					//		parentCollection = bindSettings[ii].property;
+					//	}
+					//}
 				}
 				var	listenerData = {
 						action : setting.action,
@@ -316,10 +317,20 @@ var Observable = (function() {
 							case "visible":
 								el.style.display = !!value ? this.defaultState : 'none';
 								break;
+							case "class":
+								el.className = value;
+								break;
 							case "foreach":
 								var implementation = document.createDocumentFragment(),
 									parentElement = this,
-									bindCollection = function() {
+									bindCollection = function () {
+										var selections = [];
+										while (el.childNodes.length) {
+											if (el.lastChild.selected) {
+												selections.push(el.lastChild.value);
+											}
+											el.removeChild(el.lastChild);
+										}
 										for(var idx = 0;idx<value.length;idx++) {
 											var frag = parentElement.forEachTemplate.cloneNode(true);
 											for(var n = 0; n<frag.childNodes.length; n++) {
@@ -330,20 +341,31 @@ var Observable = (function() {
 										}
 										el.appendChild(implementation);
 										_on(el);
+
+										/* case for when foreach is on a select,
+											to rebind while preserving selection info */
+										var selectionsMade = 0;
+										for (var idx = 0; idx < parentElement.element.childNodes.length; idx++) {
+											var opt = parentElement.element.childNodes[idx];
+											if (selections.some(function (f) {
+												return f == opt.value;
+											})) {
+												opt.selected = true;
+												selectionsMade++;
+											}
+										}
+										if (selectionsMade > 0) {
+											_fireEvent(parentElement.element, 'change');
+										}
 									};
 								bindCollection();
 
-								_watch({
-									model : ctx,
-									property : this.property,
-									callback : function(o) {
-										// empty array and rebind
-										while(el.childNodes.length) {
-											el.removeChild(el.lastChild);
-										}
-										bindCollection();
-									}
-								});
+								if (!ctx._listeners[this.property] || !ctx._listeners[this.property].some(function (obj) { return obj.toString() == bindCollection.toString(); }))
+									_watch({
+										model : ctx,
+										property : this.property,
+										callback: bindCollection
+									});
 								break;
 							default:
 								break;
@@ -353,7 +375,7 @@ var Observable = (function() {
 					listener.monitorID = _monitorIndex++;
 					currentNode.setAttribute('data-monitor-id', listener.monitorID);
 
-				switch(setting.action) {
+				switch (setting.action) {
 					case "visible":
 						listenerData.defaultState = getComputedStyle(currentNode).display;
 						break;
@@ -397,6 +419,18 @@ var Observable = (function() {
 		}
 	}
 
+	function _fireEvent(obj, evt) {
+		var fireOnThis = obj;
+		if (document.createEvent) {
+			var evObj = document.createEvent('MouseEvents');
+			evObj.initEvent(evt, true, false);
+			fireOnThis.dispatchEvent(evObj);
+		}
+		else if (document.createEventObject) { //IE
+			var evObj = document.createEventObject();
+			fireOnThis.fireEvent('on' + evt, evObj);
+		}
+	}
 	/* detach data-bind interfaces */
 	function _off() {
 		var elements = [], key = '[data-monitor-id]';
@@ -415,7 +449,7 @@ var Observable = (function() {
 		for(var i=0;i<elements.length;i++) {
 			var el = elements[i],
 				mid = el.getAttribute('data-monitor-id'),
-				ctx = mid._dataContext || _getDataContext(el, null);
+				ctx = mid ? mid._dataContext || _getDataContext(el, null) : null;
 
 			if(ctx) {
 				for (var k in ctx._listeners) {

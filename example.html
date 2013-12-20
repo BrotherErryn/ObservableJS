@@ -1,30 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<meta charset="ut-8" />
+		<meta charset="utf-8" />
+		<style>
+			span.Ted {
+				color: red;
+				font-size:x-large;
+			}
+			span.Bob {
+				color: green;
+				font-weight:bold;
+			}
+			ul {
+				list-style: none;
+			}
+			li button {
+				width: 50px;
+				margin-right: 1em;
+			}
+			li {
+				font-family: Consolas, 'Courier New', sans-serif;
+			}
+		</style>
 	</head>
-	<body>
-		<div data-bind="model:myViewModel">
-			<input type="text" data-bind="value:name" /> <input type="checkbox" id="awesome" data-bind="value:nameIsAwesome" /><label for="awesome">is awesome</label>
-
-			<br />
-			<div data-bind="visible:nameIsAwesome">
-				<span data-bind="text:name"></span>
-				<span data-bind="text:nameIsAwesome"></span>
-			</div>
-
-			<!--<div data-bind="foreach:items">
-				<p><span>Item</span> <span data-bind="text:name"></span></p>
-			</div>-->
-
-			<div>
-				<select data-bind="foreach:items,value:selectedItems" multiple size="5">
-					<option data-bind="text:name"></option>
-				</select>
-			</div>
-			<div data-bind="html:selectionText"></div>
-	    </div>
-		<script src="observable.js"></script>
-		<script src="example.js"></script>
-	</body>
+<body>
+	<div data-bind="model:myViewModel">
+		<input type="text" data-bind="value:name" /> <input type="checkbox" id="awesome" data-bind="value:nameIsAwesome" /><label for="awesome">is awesome</label>
+		<br />
+		<div>
+			<span data-bind="visible:nameIsAwesome"><span data-bind="text:name,class:name"></span> is awesome!</span>&nbsp;
+		</div>
+		<div>
+			<select data-bind="foreach:items,value:selectedItems" multiple size="5">
+				<option data-bind="text:name"></option>
+			</select>
+		</div>
+		<div><span data-bind="text:name"></span> has selected: <span data-bind="html:selectionText">nothing</span></div>
+	</div>
+	<ul>
+		<li><button onclick="myViewModel.name='Bob'">Run</button>myViewModel.name = 'Bob'</li>
+		<li><button onclick="myViewModel.name='Fritz'">Run</button>myViewModel.name = 'Fritz'</li>
+		<li><button onclick="myViewModel.name='Ted'">Run</button>myViewModel.name = 'Ted'</li>
+		<li><button onclick="myViewModel.nameIsAwesome = !myViewModel.nameIsAwesome">Run</button>myViewModel.nameIsAwesome = !myViewModel.nameIsAwesome</li>
+		<li><button onclick="myViewModel.items.push({ name: 'Explosives', amount: 42.00 })">Run</button>myViewModel.items.push({name:"Explosives", amount:42.00})</li>
+		<li><button onclick="myViewModel.items.pop({ name: 'Explosives', amount: 42.00 })">Run</button>myViewModel.items.pop()</li>
+		<li><button onclick="myViewModel.selectedItems = [myViewModel.items[0], myViewModel.items[1], myViewModel.items[2]]">Run</button>myViewModel.selectedItems = [myViewModel.items[0], myViewModel.items[1], myViewModel.items[2]]</li>
+	</ul>
+	<script src="observable.js"></script>
+	<script src="example.js"></script>
+</body>
 </html>

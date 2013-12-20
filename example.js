@@ -1,5 +1,5 @@
 window.myViewModel = {
-	name: "Bob",
+	name: "Gerald",
 	nameIsAwesome: true,
 	items: [
 		{ name:"Sandwich", amount: 2.25 },
@@ -20,23 +20,26 @@ Observable.Watch({
 	model: myViewModel,
 	property: "nameIsAwesome",
 	callback: function(o, v) {
-		console.log( v ? "AWESOME" : "NOT AWESOME");
+		//console.log( v ? "AWESOME" : "NOT AWESOME");
 	}
 });
-Observable.Watch({
-	model: myViewModel,
-	property: "selectedItems",
-	callback: function(o, v) {
-		console.log("Generating selected items message");
-		var message = "";
-		if(myViewModel.selectedItems.length) {
-			var names = [];
-			for(var i=0;i<myViewModel.selectedItems.length;i++) {
-				names.push(myViewModel.selectedItems[i].name);
-			}
-			message = names.join(", ");
-			message = "You selected: " + message;
+
+function calculateSelectionMessage(o, v) {
+	//console.log("Generating selected items message");
+	var message = "";
+	if (myViewModel.selectedItems.length) {
+		var names = [];
+		for (var i = 0; i < myViewModel.selectedItems.length; i++) {
+			names.push(myViewModel.selectedItems[i].name);
 		}
-		myViewModel.selectionText = message;
+		message = names.join(", ");
+		message = message;
 	}
+	myViewModel.selectionText = message;
+}
+
+Observable.Watch({
+		model: myViewModel,
+		property: "selectedItems",
+		callback: calculateSelectionMessage
 });
