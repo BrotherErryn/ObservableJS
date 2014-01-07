@@ -20,4 +20,4 @@ Currently supported bindings are:
 
 Standard Array functions are supported/observed as well.
 
-[Demo (JSFiddle)](|http://jsfiddle.net/gdtSs/3/embedded/)
+[Demo (JSFiddle)](http://jsfiddle.net/gdtSs/3/embedded/)
